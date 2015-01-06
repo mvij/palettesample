@@ -4,5 +4,6 @@
     <string name="app_name">PaletteSample</string>
     <string name="hello_world">Hello world!</string>
     <string name="action_settings">Settings</string>
+    <string name="placeholder">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc vel risus ut lacus tristique auctor. </string>
 
 </resources>

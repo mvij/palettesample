@@ -11,6 +11,7 @@ import android.support.v7.graphics.Palette;
 import android.text.SpannableStringBuilder;
 import android.text.Spanned;
 import android.text.style.BackgroundColorSpan;
+import android.util.TypedValue;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -26,16 +27,38 @@ import java.io.InputStream;
 public class MainActivity extends ActionBarActivity {
 
     private final int SELECT_PHOTO = 1001;
+    int padding;
 
     ImageView mImageView;
+    LinearLayout.LayoutParams titleParams,bodyParams;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         supportRequestWindowFeature(Window.FEATURE_INDETERMINATE_PROGRESS);
         setContentView(R.layout.activity_main);
+        padding = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP,8,getResources().getDisplayMetrics());
+
         setListeners();
         refreshPalettes();
+    }
+
+    public LinearLayout.LayoutParams getTitleParams() {
+        if(titleParams==null){
+            titleParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT);
+            titleParams.topMargin = padding;
+        }
+        return titleParams;
+    }
+
+    public LinearLayout.LayoutParams getBodyParams() {
+        if(bodyParams==null){
+            bodyParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT);
+            bodyParams.bottomMargin = padding;
+        }
+        return bodyParams;
     }
 
     private void refreshPalettes() {
@@ -46,18 +69,43 @@ public class MainActivity extends ActionBarActivity {
             public void onGenerated(Palette palette) {
                 // Do something with colors...
                 textView.setText(getColouredSequence(palette));
-                int count=0;
+                int count = 0;
                 LinearLayout linearLayout = (LinearLayout) findViewById(R.id.swatches);
                 linearLayout.removeAllViews();
-                for (Palette.Swatch swatch:palette.getSwatches()) {
-                    TextView textView = new TextView(MainActivity.this);
-                    textView.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 48));
-                    textView.setBackgroundColor(swatch.getRgb());
-                    textView.setTextColor(swatch.getTitleTextColor());
-                    textView.setHintTextColor(swatch.getBodyTextColor());
-                    textView.setTag(swatch.getPopulation());
-                    textView.setHint("swatch : "+count++);
-                    linearLayout.addView(textView);
+                for (Palette.Swatch swatch : palette.getSwatches()) {
+                    TextView titleTextView = null;
+                    try {
+                        titleTextView = new TextView(MainActivity.this);
+                        titleTextView.setLayoutParams(new LinearLayout.LayoutParams(
+                                LinearLayout.LayoutParams.MATCH_PARENT,
+                                LinearLayout.LayoutParams.WRAP_CONTENT));
+                        titleTextView.setBackgroundColor(swatch.getRgb());
+                        titleTextView.setTextColor(swatch.getTitleTextColor());
+                        titleTextView.setPadding(padding,padding,padding,0);
+                        titleTextView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 26);
+                        titleTextView.setLayoutParams(getTitleParams());
+                        titleTextView.setText("Title");
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+
+                    try {
+                        TextView bodyTextView = new TextView(MainActivity.this);
+                        bodyTextView.setLayoutParams(new LinearLayout.LayoutParams(
+                                LinearLayout.LayoutParams.MATCH_PARENT,
+                                LinearLayout.LayoutParams.WRAP_CONTENT));
+                        bodyTextView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
+                        bodyTextView.setLayoutParams(getBodyParams());
+                        bodyTextView.setPadding(padding,0,padding,padding);
+                        bodyTextView.setBackgroundColor(swatch.getRgb());
+                        bodyTextView.setTextColor(swatch.getBodyTextColor());
+                        bodyTextView.setText(R.string.placeholder);
+
+                        linearLayout.addView(titleTextView);
+                        linearLayout.addView(bodyTextView);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
                 }
                 setSupportProgressBarIndeterminateVisibility(false);
             }
@@ -77,21 +125,38 @@ public class MainActivity extends ActionBarActivity {
     }
 
     @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent imageReturnedIntent) {
+    protected void onActivityResult(int requestCode, int resultCode, final Intent imageReturnedIntent) {
         super.onActivityResult(requestCode, resultCode, imageReturnedIntent);
 
-        switch(requestCode) {
+        switch (requestCode) {
             case SELECT_PHOTO:
-                if(resultCode == RESULT_OK){
-                    try {
-                        final Uri imageUri = imageReturnedIntent.getData();
-                        final InputStream imageStream = getContentResolver().openInputStream(imageUri);
-                        final Bitmap selectedImage = BitmapFactory.decodeStream(imageStream);
-                        mImageView.setImageBitmap(selectedImage);
-                        refreshPalettes();
-                    } catch (FileNotFoundException e) {
-                        e.printStackTrace();
-                    }
+                if (resultCode == RESULT_OK) {
+                    setSupportProgressBarIndeterminateVisibility(true);
+                    new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                            if(mImageView!=null){
+                                try {
+                                    final Uri imageUri = imageReturnedIntent.getData();
+                                    final InputStream imageStream = getContentResolver().openInputStream(
+                                            imageUri);
+                                    final Bitmap selectedImage = BitmapFactory.decodeStream(imageStream);
+                                    runOnUiThread(new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            if(mImageView!=null) {
+                                                mImageView.setImageBitmap(selectedImage);
+                                                refreshPalettes();
+                                            }
+                                        }
+                                    });
+
+                                } catch (FileNotFoundException e) {
+                                    e.printStackTrace();
+                                }
+                            }
+                        }
+                    }).start();
 
                 }
         }
@@ -99,25 +164,38 @@ public class MainActivity extends ActionBarActivity {
 
     private CharSequence getColouredSequence(Palette palette) {
         SpannableStringBuilder b = new SpannableStringBuilder();
-        b.append(addColorSequence(palette.getVibrantColor(-1),"Vibrant"));
-        b.append(addColorSequence(palette.getDarkVibrantColor(-1),"Dark Vibrant"));
-        b.append(addColorSequence(palette.getLightVibrantColor(-1),"Light Vibrant"));
-        b.append(addColorSequence(palette.getMutedColor(-1),"Muted"));
-        b.append(addColorSequence(palette.getDarkMutedColor(-1),"Dark Muted"));
-        b.append(addColorSequence(palette.getLightMutedColor(-1),"Light Muted"));
+        b.append(addColorSequenceForPalette(palette.getVibrantColor(-1), "Vibrant"));
+        b.append(addColorSequenceForPalette(palette.getDarkVibrantColor(-1), "Dark Vibrant"));
+        b.append(addColorSequenceForPalette(palette.getLightVibrantColor(-1), "Light Vibrant"));
+        b.append(addColorSequenceForPalette(palette.getMutedColor(-1), "Muted"));
+        b.append(addColorSequenceForPalette(palette.getDarkMutedColor(-1), "Dark Muted"));
+        b.append(addColorSequenceForPalette(palette.getLightMutedColor(-1), "Light Muted"));
         return b;
     }
 
-    private CharSequence addColorSequence(int color,String colorName){
+    private CharSequence addColorSequenceForPalette(int color, String colorName) {
         SpannableStringBuilder b = new SpannableStringBuilder();
         int index = b.length();
-        if(color!=-1) {
+        if (color != -1) {
             b.append("    ");
-            b.setSpan(new BackgroundColorSpan(color),index,b.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            b.setSpan(new BackgroundColorSpan(color), index, b.length(),
+                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
             b.append(" - ");
             b.append(colorName);
             b.append(" \n");
         }
+        return b;
+    }
+
+    private CharSequence addColorSequenceForSwatch(int color, String colorName) {
+        SpannableStringBuilder b = new SpannableStringBuilder();
+        int index = b.length();
+        b.append("    ");
+        b.setSpan(new BackgroundColorSpan(color), index, b.length(),
+                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        b.append(" - ");
+        b.append(colorName);
+        b.append(" \n");
         return b;
     }
 
