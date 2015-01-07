@@ -84,7 +84,8 @@ public class MainActivity extends ActionBarActivity {
                         titleTextView.setPadding(padding,padding,padding,0);
                         titleTextView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 26);
                         titleTextView.setLayoutParams(getTitleParams());
-                        titleTextView.setText("Title");
+                        titleTextView.setText("Color : "+Integer.toHexString(swatch.getRgb()));
+                        titleTextView.append("\nTitle : "+Integer.toHexString(swatch.getTitleTextColor()));
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
@@ -99,7 +100,8 @@ public class MainActivity extends ActionBarActivity {
                         bodyTextView.setPadding(padding,0,padding,padding);
                         bodyTextView.setBackgroundColor(swatch.getRgb());
                         bodyTextView.setTextColor(swatch.getBodyTextColor());
-                        bodyTextView.setText(R.string.placeholder);
+                        bodyTextView.setText("Body : "+Integer.toHexString(swatch.getBodyTextColor())+"\n");
+                        bodyTextView.append(getString(R.string.placeholder));
 
                         linearLayout.addView(titleTextView);
                         linearLayout.addView(bodyTextView);
@@ -181,24 +183,13 @@ public class MainActivity extends ActionBarActivity {
             b.setSpan(new BackgroundColorSpan(color), index, b.length(),
                     Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
             b.append(" - ");
+            b.append(Integer.toHexString(color));
+            b.append(" - ");
             b.append(colorName);
             b.append(" \n");
         }
         return b;
     }
-
-    private CharSequence addColorSequenceForSwatch(int color, String colorName) {
-        SpannableStringBuilder b = new SpannableStringBuilder();
-        int index = b.length();
-        b.append("    ");
-        b.setSpan(new BackgroundColorSpan(color), index, b.length(),
-                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-        b.append(" - ");
-        b.append(colorName);
-        b.append(" \n");
-        return b;
-    }
-
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
