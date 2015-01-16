@@ -20,6 +20,10 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.List;
+
 import static android.widget.LinearLayout.LayoutParams;
 import static com.dexetra.palettesample.ScalingUtilities.ScalingLogic;
 
@@ -34,6 +38,20 @@ public class MainActivity extends ActionBarActivity {
     int mDefaultHeight;
     private int mTotalPixels;
     private Menu mMenu;
+
+    Comparator<Object> mComparator = new Comparator<Object>() {
+        @Override
+        public int compare(Object lhs, Object rhs) {
+            Palette.Swatch l = (Palette.Swatch)lhs;
+            Palette.Swatch r = (Palette.Swatch)rhs;
+            if(l.getPopulation()<r.getPopulation())
+                return 1;
+            else if(l.getPopulation()==r.getPopulation())
+                return 0;
+            else
+                return -1;
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -170,13 +188,15 @@ public class MainActivity extends ActionBarActivity {
         Palette.generateAsync(scaledBitmap, new Palette.PaletteAsyncListener() {
             public void onGenerated(Palette palette) {
                 // Do something with colors...
-
-
+                List<Palette.Swatch> swatches = palette.getSwatches();
+                Object[] s = swatches.toArray();
+                Arrays.sort(s,mComparator);
                 textView.setText(getColouredSequence(palette));
                 int count = 0;
                 LinearLayout linearLayout = (LinearLayout) findViewById(R.id.swatches);
                 linearLayout.removeAllViews();
-                for (Palette.Swatch swatch : palette.getSwatches()) {
+                for (Object swat : s) {
+                    Palette.Swatch swatch = (Palette.Swatch) swat;
                     TextView titleTextView = null;
                     try {
                         titleTextView = new TextView(MainActivity.this);
@@ -220,7 +240,7 @@ public class MainActivity extends ActionBarActivity {
     }
 
     private String getPercentageString(int population) {
-        return String.format("%.3f", (population * 100.0f) / mTotalPixels) + "%";
+        return String.format("%.3f", (population * 100.0f) / mTotalPixels) + "% : "+population;
     }
 
     private void setListeners() {
