@@ -1,8 +1,12 @@
 package com.dexetra.palettesample;
 
+import android.app.WallpaperInfo;
+import android.app.WallpaperManager;
 import android.content.Intent;
 import android.graphics.Bitmap;
+import android.graphics.Color;
 import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.v7.app.ActionBarActivity;
@@ -172,9 +176,59 @@ public class MainActivity extends ActionBarActivity {
                 layoutParams.height = (int) mImageView.getTag();
             else layoutParams.height = mDefaultHeight;
             mImageView.setLayoutParams(layoutParams);
+        }else if(id==R.id.action_wallpaper){
+            setSupportProgressBarIndeterminateVisibility(true);
+            item.setEnabled(false);
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    WallpaperManager wp = WallpaperManager.getInstance(
+                            MainActivity.this.getApplicationContext());
+                    WallpaperInfo wi = wp.getWallpaperInfo();
+                    if(wi==null) {
+                        final BitmapDrawable d = (BitmapDrawable) wp.getDrawable();
+                        if (d != null) {
+                            Bitmap src = d.getBitmap();
+                            if (src != null)
+                                calculateFromBitmap(src);
+                        }
+                    }else{
+                        Drawable d = wi.loadThumbnail(getPackageManager());
+                        if(d instanceof BitmapDrawable){
+                            Bitmap b =((BitmapDrawable)d).getBitmap();
+                            if(b!=null)
+                                calculateFromBitmap(b);
+                        }
+                    }
+                }
+            }).start();
         }
 
         return super.onOptionsItemSelected(item);
+    }
+
+    private void calculateFromBitmap(final Bitmap src) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                if (mImageView != null) {
+                    mImageView.setImageBitmap(src);
+                    refreshPalettes(src);
+                    mTotalPixels = src.getHeight() *
+                            src.getWidth();
+
+                    if (mMenu != null) {
+                        int h = src.getHeight();
+                        mMenu.findItem(R.id.action_toggle_resize)
+                             .setVisible(h > mDefaultHeight + 80);
+                        mImageView.setTag(h);
+                    }
+                }
+                if(mMenu!=null)
+                    mMenu.findItem(R.id.action_wallpaper).setEnabled(true);
+                setSupportProgressBarIndeterminateVisibility(false);
+            }
+        });
     }
 
     private void refreshPalettes(Bitmap scaledBitmap) {
@@ -205,10 +259,9 @@ public class MainActivity extends ActionBarActivity {
                         titleTextView.setBackgroundColor(swatch.getRgb());
                         titleTextView.setTextColor(swatch.getTitleTextColor());
                         titleTextView.setPadding(padding, padding, padding, 0);
-                        titleTextView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 26);
+                        titleTextView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
                         titleTextView.setLayoutParams(getTitleParams());
-                        titleTextView.setText("Color : " + Integer.toHexString(swatch.getRgb()) +
-                                " : " + getPercentageString(swatch.getPopulation()));
+                        titleTextView.setText(addColorSequenceForPalette(swatch,null));
                         titleTextView.append("\nTitle : " + Integer.toHexString(
                                 swatch.getTitleTextColor()));
                     } catch (Exception e) {
@@ -219,7 +272,7 @@ public class MainActivity extends ActionBarActivity {
                         TextView bodyTextView = new TextView(MainActivity.this);
                         bodyTextView.setLayoutParams(new LayoutParams(LayoutParams.MATCH_PARENT,
                                 LayoutParams.WRAP_CONTENT));
-                        bodyTextView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
+                        bodyTextView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
                         bodyTextView.setLayoutParams(getBodyParams());
                         bodyTextView.setPadding(padding, 0, padding, padding);
                         bodyTextView.setBackgroundColor(swatch.getRgb());
@@ -240,7 +293,7 @@ public class MainActivity extends ActionBarActivity {
     }
 
     private String getPercentageString(int population) {
-        return String.format("%.3f", (population * 100.0f) / mTotalPixels) + "% : "+population;
+        return population+"("+String.format("%.3f", (population * 100.0f) / mTotalPixels) + "%)";
     }
 
     private void setListeners() {
@@ -277,12 +330,35 @@ public class MainActivity extends ActionBarActivity {
                     Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
             b.append(" - ");
             b.append(Integer.toHexString(color));
-            b.append(" - ");
-            b.append(colorName);
-            b.append(" - ");
+            if(colorName!=null){
+                b.append(" - ");
+                b.append(colorName);
+                b.append(" -");
+            }
+            b.append("\n");
             b.append(getPercentageString(swatch.getPopulation()));
-            b.append(" \n");
+            b.append(" - YIQ ");
+            b.append(Boolean.toString(isYIQCompatible(color)));
+            b.append(" - 50/50 ");
+            b.append(Boolean.toString(is5050Compatible(color)));
+            if(colorName!=null)
+                b.append(" \n\n");
         }
         return b;
+    }
+
+    private boolean isYIQCompatible(int color) {
+        int r = Color.red(color);
+        int g = Color.green(color);
+        int b = Color.green(color);
+
+        int yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+        return (yiq < 128);
+    }
+    private boolean is5050Compatible(int color) {
+        int r = Color.red(color);
+        int g = Color.green(color);
+        int b = Color.green(color);
+        return r + g + b < 740;
     }
 }

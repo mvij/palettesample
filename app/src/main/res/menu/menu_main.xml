@@ -9,8 +9,16 @@
           android:icon="@android:drawable/ic_menu_report_image"
           app:showAsAction="ifRoom"/>
 
+    <item android:id="@+id/action_wallpaper"
+          android:title="Wallpaper"
+          android:orderInCategory="101"
+          android:icon="@android:drawable/ic_menu_gallery"
+          app:showAsAction="ifRoom"/>
+
     <item android:id="@+id/action_settings"
           android:title="@string/action_settings"
-          android:orderInCategory="101"
+          android:orderInCategory="102"
           app:showAsAction="never"/>
+
+
 </menu>
